@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+  <head>
+		<title>Migraciones</title>
+		<script src="https://apis.google.com/js/client.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+		<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+		<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+		<style>
+			html, body {
+				font-family:Tahoma;
+			  	height: 100%;
+			  	margin: 0;
+			  	padding: 0;
+			}
+
+			h2{
+				position:absolute;
+				bottom:10px;
+				right:10px;
+				font-size:16px;
+				text-shadow: 1px 1px 10px #948294;
+				filter: dropshadow(color=#948294, offx=1, offy=1);
+			}
+			h2 small{
+				font-size:12px;
+			}
+			#map-canvas, #map_canvas {
+			  height: 100%;
+			}
+			#running{
+				position:absolute;
+				top:50%;
+				left:50%;
+				width:100px;
+				font-size:20px;
+				text-align:center;
+				margin-left:-50px;
+			}
+
+			@media print {
+			  html, body {
+			    height: auto;
+			  }
+
+			  #map-canvas, #map_canvas {
+			    height: 650px;
+			  }
+			}
+		</style>
+		<script>
+		  var map;
+		  var timer;
+		  var seconds;
+		  var max_rows=100;
+		  var project_id = '805215322008';
+		  var client_id = '805215322008.apps.googleusercontent.com';
+
+		  var config = {
+		    'client_id': client_id,
+		    'scope': 'https://www.googleapis.com/auth/bigquery', 
+			'immediate': true
+		  };
+
+		  function runQuery() {
+			seconds = 0;
+			$("#running").text("Processing");
+			timer = setInterval(function(){
+				seconds+= 0.1;
+				$("#running").text("Processing "+seconds.toFixed(1)+"s");
+			},100);
+			
+		   	var request = gapi.client.bigquery.jobs.query({
+		      'projectId': project_id,
+		      'timeoutMs': '30000',
+		      'query': 'SELECT nace_lat, nace_lng, l.lat AS vive_lat, l.lng AS vive_lng, count(*) AS cantidad FROM (SELECT l.lat AS nace_lat, l.lng AS nace_lng, P23B AS vive, FROM [data-sensing-lab:hoffa.persona] p JOIN (select location_id,lat,lng from [data-sensing-lab:hoffa.location]) l ON p.P22B = l.location_id where p.P22A=2) AS raw JOIN (select location_id,lat,lng from [data-sensing-lab:hoffa.location]) l ON raw.vive = l.location_id GROUP BY nace_lat,nace_lng,vive_lat,vive_lng order by cantidad DESC limit '+max_rows
+		    });
+			/* QUERY
+			SELECT
+				nace_lat,
+				nace_lng,
+				l.lat AS vive_lat,
+				l.lng AS vive_lng,
+				count(*) AS cantidad
+			FROM
+				(SELECT
+					l.lat AS nace_lat,
+					l.lng AS nace_lng,
+					P23B AS vive,
+				FROM
+					[data-sensing-lab:hoffa.persona] p
+				JOIN
+					(SELECT location_id,lat,lng FROM [data-sensing-lab:hoffa.location]) l
+				 	ON p.P22B = l.location_id
+				WHERE 
+					p.P22A=2) AS raw
+			JOIN
+				(SELECT location_id,lat,lng FROM [data-sensing-lab:hoffa.location]) l
+				 ON raw.vive = l.location_id
+			GROUP BY nace_lat,nace_lng,vive_lat,vive_lng
+			ORDER BY cantidad DESC 
+			LIMIT {max_rows}
+			*/
+		
+		    request.execute(function(response) {  
+				var min,max;
+		        $.each(response.result.rows, function(i, item) {
+					if(i==0){
+						var myLatLng = new google.maps.LatLng(item.f[0].v, item.f[1].v);
+						var mapOptions = {
+						    zoom: 6,
+						    center: myLatLng,
+						    mapTypeId: google.maps.MapTypeId.TERRAIN
+						};
+
+						map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);	
+						max = item.f[4].v;
+						min = response.result.rows[response.result.rows.length-1].f[4].v;
+					}
+				
+					var lineCoordinates = [
+					    new google.maps.LatLng(item.f[0].v,item.f[1].v),
+					    new google.maps.LatLng(item.f[2].v, item.f[3].v)
+					  ];
+
+					  var lineSymbol = {
+					    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW
+					  };
+
+					  var line = new google.maps.Polyline({
+					    path: lineCoordinates,
+					    strokeColor: "#CC33FF",
+					    strokeOpacity:(7*(item.f[4].v - min)/(max - min)+3)/10, //normalizado a [0.3,1]
+					    icons: [{
+					      icon: lineSymbol,
+					      offset: '100%'
+					    }],
+					    map: map
+					});
+				
+					clearInterval(timer);
+					$("#running").hide();
+		        });  
+		    });
+		  }
+
+		  function auth() {
+				$("#running").text("Authorizing");
+				
+				try{
+					gapi.auth.authorize(config, function(res) {
+						console.log(res);
+			        	gapi.client.load('bigquery', 'v2', runQuery);
+			    	});
+				}
+		    	catch(e){
+					console.log(e);
+				}
+		  }
+		</script>
+	</head>
+	<body onload="auth();">
+	<div id="map-canvas"></div>
+	<h2>Migraciones<br><small>powered by BigQuery</small></h2>
+	<div id="running">Processing</div>
+	</body>
+</html>
+	
+	
