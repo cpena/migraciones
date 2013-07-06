@@ -1,4 +1,5 @@
 migraciones
 ===========
 
-Ejemplo de consulta a BigQuery desde Javascript y despliegue de resultados en maps
+Ejemplo de consulta a base de datos del Censo 2002 de Chile usando BigQuery desde Javascript y despliegando
+el resultado con Maps
