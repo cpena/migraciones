@@ -1,0 +1,40 @@
+html, body {
+	font-family:Tahoma;
+  	height: 100%;
+  	margin: 0;
+  	padding: 0;
+}
+
+h2{
+	position:absolute;
+	bottom:10px;
+	right:10px;
+	font-size:16px;
+	text-shadow: 1px 1px 10px #948294;
+	filter: dropshadow(color=#948294, offx=1, offy=1);
+}
+h2 small{
+	font-size:12px;
+}
+#map-canvas, #map_canvas {
+  height: 100%;
+}
+#running{
+	position:absolute;
+	top:50%;
+	left:50%;
+	width:400px;
+	font-size:20px;
+	text-align:center;
+	margin-left:-200px;
+}
+
+@media print {
+  html, body {
+    height: auto;
+  }
+
+  #map-canvas, #map_canvas {
+    height: 650px;
+  }
+}
